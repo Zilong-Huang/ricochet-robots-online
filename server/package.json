@@ -1,0 +1,21 @@
+{
+    "name": "ricochet-robots-server",
+    "version": "1.0.0",
+    "description": "Server for Ricochet Robots Online game",
+    "main": "server.js",
+    "scripts": {
+      "start": "node server.js",
+      "server": "nodemon server.js",
+      "client": "npm start --prefix client",
+      "dev": "concurrently \"npm run server\" \"npm run client\""
+    },
+    "dependencies": {
+      "express": "^4.17.1",
+      "socket.io": "^4.2.0",
+      "uuid": "^8.3.2"
+    },
+    "devDependencies": {
+      "concurrently": "^6.2.1",
+      "nodemon": "^2.0.12"
+    }
+  }
