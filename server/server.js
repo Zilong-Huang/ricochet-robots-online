@@ -265,24 +265,13 @@ function isValidMove(board, robots, move) {
 
 // Helper function to check if the solution is correct
 function checkSolution(board, initialRobots, moves, goal) {
-  let robots = JSON.parse(JSON.stringify(initialRobots));
-  let hasRicocheted = false;
-
-  for (const move of moves) {
-    const robotIndex = robots.findIndex(r => r.color === move.color);
-    const newPosition = isValidMove(board, robots, move);
-    
-    if (!newPosition) return false; // Invalid move
-
-    if (newPosition.x !== robots[robotIndex].x || newPosition.y !== robots[robotIndex].y) {
-      hasRicocheted = true;
-    }
-
-    robots[robotIndex] = { ...robots[robotIndex], ...newPosition };
+  if (moves.length <= 1) {
+    return false;
   }
 
+  let robots = JSON.parse(JSON.stringify(initialRobots));
   const targetRobot = robots.find(r => r.color[0].toUpperCase() === goal.color);
-  return hasRicocheted && targetRobot.x === goal.x && targetRobot.y === goal.y;
+  return targetRobot.x === goal.x && targetRobot.y === goal.y;
 }
 
 io.on('connection', (socket) => {
@@ -338,10 +327,13 @@ io.on('connection', (socket) => {
           io.emit('update_timer', gameState.timer);
           if (gameState.timer <= 0) {
             clearInterval(countdown);
+            gameState.timer = null;
             gameState.biddingPhase = false;
             io.emit('bidding_phase_ended', gameState.currentBid);
             gameState.activePlayer = gameState.currentBid.playerId;
             io.emit('prove_solution', gameState.activePlayer);
+          } else if (gameState.timer === null) {
+            clearInterval(countdown);
           }
         }, 1000);
       }
@@ -411,9 +403,10 @@ io.on('connection', (socket) => {
 
       if (Object.keys(gameState.endBidVotes).length === players.length) {
         // All players voted to end bidding
+        gameState.timer = null;
         gameState.biddingPhase = false;
+        io.emit('bidding_phase_ended', gameState.currentBid);
         gameState.activePlayer = gameState.currentBid.playerId;
-        gameState.endBidVotes = {};
         io.emit('prove_solution', gameState.activePlayer);
       }
     }
@@ -464,21 +457,6 @@ function resetRobots() {
   gameState.robots = placeRobots(gameState.board);
   gameState.moves = [];
   io.emit('update_game_state', gameState);
-}
-
-function tryNextBidder() {
-  const sortedBids = players
-    .map(player => ({ playerId: player.id, value: player.lastBid, score: player.score }))
-    .filter(bid => bid.value !== undefined && bid.playerId !== gameState.activePlayer)
-    .sort((a, b) => a.value - b.value || a.score - b.score);
-
-  if (sortedBids.length > 0) {
-    gameState.currentBid = sortedBids[0];
-    gameState.activePlayer = sortedBids[0].playerId;
-    io.emit('prove_solution', gameState.activePlayer);
-  } else {
-    startNextRound();
-  }
 }
 
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
